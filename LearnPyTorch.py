@@ -264,9 +264,9 @@ for t in range(500):
     #     w1.grad.zero_()
     #     w2.grad.zero_()
 
-    with torch.no_grad():
-        for param in model.parameters():
-            param-=learning_rate*param.grad
+    # with torch.no_grad():
+    #     for param in model.parameters():
+    #         param-=learning_rate*param.grad
 
 
 
