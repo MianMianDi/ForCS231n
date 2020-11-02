@@ -138,6 +138,26 @@ class MyReLU(torch.autograd.Function):
         grad_input[input < 0] = 0
         return grad_input
 
+
+class TwoLayerNet(torch.nn.Module):
+    def __init__(self, D_in, H, D_out):
+        """
+        在构造函数中，我们实例化了两个nn.Linear模块，并将它们作为成员变量。
+        """
+        super(TwoLayerNet, self).__init__()
+        self.linear1 = torch.nn.Linear(D_in, H)
+        self.linear2 = torch.nn.Linear(H, D_out)
+
+    def forward(self, x):
+        """
+        在前向传播的函数中，我们接收一个输入的张量，也必须返回一个输出张量。
+        我们可以使用构造函数中定义的模块以及张量上的任意的(可微分的）操作。
+        """
+        h_relu = self.linear1(x).clamp(min=0)
+        y_pred = self.linear2(h_relu)
+        return y_pred
+
+
 dtype=torch.float
 device=torch.device("cpu")
 
@@ -146,23 +166,33 @@ N,D_in,H,D_out=64,1000,100,10
 x=torch.randn(N,D_in,device=device,dtype=dtype)
 y=torch.randn(N,D_out,device=device,dtype=dtype)
 
-# 使用nn包定义模型和损失函数
-model=torch.nn.Sequential(
-    torch.nn.Linear(D_in,H),
-    torch.nn.ReLU(),
-    torch.nn.Linear(H,D_out)
-)
-loss_fn=torch.nn.MSEloss(reduction='sum')
+# # 使用nn包定义模型和损失函数
+# model=torch.nn.Sequential(
+#     torch.nn.Linear(D_in,H),
+#     torch.nn.ReLU(),
+#     torch.nn.Linear(H,D_out)
+# )
+# loss_fn=torch.nn.MSEloss(reduction='sum')
+
+# 通过实例化上面定义的类来构建我们的模型
+model = TwoLayerNet(D_in, H, D_out)
 
 # 将requires_grad设置为True，意味着我们希望在反向传播时候计算这些值的梯度
 w1=torch.randn(D_in,H,device=device,dtype=dtype,requires_grad=True)
 w2=torch.randn(H,D_out,device=device,dtype=dtype,requires_grad=True)
 
 learning_rate=1e-6
-# 使用optim包定义优化器(Optimizer）。Optimizer将会为我们更新模型的权重
-# 这里我们使用Adam优化方法；optim包还包含了许多别的优化算法
-# Adam构造函数的第一个参数告诉优化器应该更新哪些张量
-optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
+# # 使用optim包定义优化器(Optimizer）。Optimizer将会为我们更新模型的权重
+# # 这里我们使用Adam优化方法；optim包还包含了许多别的优化算法
+# # Adam构造函数的第一个参数告诉优化器应该更新哪些张量
+# optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
+
+# 构造损失函数和优化器
+# SGD构造函数中对model.parameters()的调用
+# 将包含模型的一部分，即两个nn.Linear模块的可学习参数
+criterion = torch.nn.MSELoss(reduction='sum')
+optimizer = torch.optim.SGD(model.parameters(), lr=1e-4)
+
 for t in range(500):
     # 前向传播：计算预测值y
     # y_pred=x.mm(w1).clamp(min=0).mm(w2)
@@ -178,8 +208,9 @@ for t in range(500):
     # loss是一个形状为(1,)的张量
     # loss.item()是这个张量对应的python数值
     # loss=(y_pred-y).pow(2).sum().item()
+    # loss=loss_fn(y_pred,y).item()
+    loss=criterion(y_pred,y).item()
     
-    loss=loss_fn(y_pred,y).item()
     if t%100==99:
         print(t,loss)
     # # 反向传播之前清零梯度
@@ -196,7 +227,7 @@ for t in range(500):
 
     # 调用Optimizer的step函数使它所有参数更新
     optimizer.step()
-    
+
     # 使用梯度下降更新权重。对于这一步，我们只想对w1和w2的值进行原地改变；不想为更新阶段构建计算图，
     # 所以我们使用torch.no_grad()上下文管理器防止PyTorch为更新构建计算图
     # with torch.no_grad():
