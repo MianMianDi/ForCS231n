@@ -159,6 +159,10 @@ w1=torch.randn(D_in,H,device=device,dtype=dtype,requires_grad=True)
 w2=torch.randn(H,D_out,device=device,dtype=dtype,requires_grad=True)
 
 learning_rate=1e-6
+# 使用optim包定义优化器(Optimizer）。Optimizer将会为我们更新模型的权重
+# 这里我们使用Adam优化方法；optim包还包含了许多别的优化算法
+# Adam构造函数的第一个参数告诉优化器应该更新哪些张量
+optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
 for t in range(500):
     # 前向传播：计算预测值y
     # y_pred=x.mm(w1).clamp(min=0).mm(w2)
@@ -178,14 +182,21 @@ for t in range(500):
     loss=loss_fn(y_pred,y).item()
     if t%100==99:
         print(t,loss)
-    # 反向传播之前清零梯度
-    model.zero_grad()
+    # # 反向传播之前清零梯度
+    # model.zero_grad()
+
+    # 在反向传播之前，使用optimizer将它要更新的所有张量的梯度清零(这些张量是模型可学习的权重)。
+    # 这是因为默认情况下，每当调用.backward(）时，渐变都会累积在缓冲区中(即不会被覆盖）
+    optimizer.zero_grad()
 
     # 这个调用将计算loss对所有requires_grad=True的tensor的梯度
     # ,即对所有可学习参数的梯度。
     # 这次调用后，w1.grad和w2.grad将分别是loss对w1和w2的梯度张量。
     loss.backward()
 
+    # 调用Optimizer的step函数使它所有参数更新
+    optimizer.step()
+    
     # 使用梯度下降更新权重。对于这一步，我们只想对w1和w2的值进行原地改变；不想为更新阶段构建计算图，
     # 所以我们使用torch.no_grad()上下文管理器防止PyTorch为更新构建计算图
     # with torch.no_grad():
