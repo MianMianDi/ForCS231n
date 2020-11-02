@@ -156,6 +156,31 @@ class TwoLayerNet(torch.nn.Module):
         h_relu = self.linear1(x).clamp(min=0)
         y_pred = self.linear2(h_relu)
         return y_pred
+# 动态图和权重共享
+# 一个完全连接的ReLU网络，该网络在每个前向传递中选择1到4之间的随机数作为隐藏层的层数，多次重复使用相同的权重计算最里面的隐藏层。
+class DynamicNet(torch.nn.Module):
+    def __init__(self, D_in, H, D_out):
+        """
+        在构造函数中，我们构造了三个nn.Linear实例，它们将在前向传播时被使用。
+        """
+        super(DynamicNet, self).__init__()
+        self.input_linear = torch.nn.Linear(D_in, H)
+        self.middle_linear = torch.nn.Linear(H, H)
+        self.output_linear = torch.nn.Linear(H, D_out)
+
+    def forward(self, x):
+        """
+        对于模型的前向传播，我们随机选择0、1、2、3，并重用了多次计算隐藏层的middle_linear模块。
+        由于每个前向传播构建一个动态计算图，
+        我们可以在定义模型的前向传播时使用常规Python控制流运算符，如循环或条件语句。
+        在这里，我们还看到，在定义计算图形时多次重用同一个模块是完全安全的。
+        这是Lua Torch的一大改进，因为Lua Torch中每个模块只能使用一次。
+        """
+        h_relu = self.input_linear(x).clamp(min=0)
+        for _ in range(random.randint(0, 3)):
+            h_relu = self.middle_linear(h_relu).clamp(min=0)
+        y_pred = self.output_linear(h_relu)
+        return y_pred
 
 
 dtype=torch.float
@@ -175,7 +200,8 @@ y=torch.randn(N,D_out,device=device,dtype=dtype)
 # loss_fn=torch.nn.MSEloss(reduction='sum')
 
 # 通过实例化上面定义的类来构建我们的模型
-model = TwoLayerNet(D_in, H, D_out)
+# model = TwoLayerNet(D_in, H, D_out)
+model = DynamicNet(D_in, H, D_out)
 
 # 将requires_grad设置为True，意味着我们希望在反向传播时候计算这些值的梯度
 w1=torch.randn(D_in,H,device=device,dtype=dtype,requires_grad=True)
