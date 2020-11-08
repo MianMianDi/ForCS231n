@@ -99,15 +99,15 @@ class TwoLayerNet(object):
         # classifier loss.                                                          #
         #############################################################################
         # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
-        mat = np.zeros(scores.shape)
         mat = scores.max(1).reshape(N,1)
         scores -= mat
         exp_scores = np.exp(scores)
+        exp_scores = exp_scores / np.sum(exp_scores,axis=1).reshape(N,1)
         correct_exp_scores = exp_scores[range(N),y]
-        data_loss = -np.log(correct_exp_scores/np.sum(exp_scores,axis=1))
+        data_loss = -np.log(correct_exp_scores)
         data_loss = np.sum(data_loss)
         data_loss /= N
-        reg_loss = 0.5 * reg * (np.sum(W1*W1) + np.sum(W2*W2))
+        reg_loss = reg * (np.sum(W1*W1) + np.sum(W2*W2))
         loss = data_loss + reg_loss
 
         # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
@@ -121,7 +121,17 @@ class TwoLayerNet(object):
         #############################################################################
         # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-        pass
+        dscores = exp_scores
+        dscores[range(N), y] -= 1
+        dscores /= N
+        grads['W2'] = np.dot(f2.T, dscores)
+        grads['b2'] = np.sum(dscores, axis=0)
+        dhidden = np.dot(dscores, W2.T)
+        dhidden[f1 <= 0] = 0
+        grads['W1'] = np.dot(X.T, dhidden)
+        grads['b1'] = np.sum(dhidden, axis=0)
+        grads['W2'] += 2 * reg * W2
+        grads['W1'] += 2 * reg * W1
 
         # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
