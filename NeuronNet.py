@@ -240,7 +240,7 @@ class TwoLayerNet(object):
         # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
         f1 = X.dot(self.params['W1']) + self.params['b1']
-        f2 = np.maximum(0, z1)  # pass through ReLU activation function
+        f2 = np.maximum(0, f1)  # pass through ReLU activation function
         scores = f2.dot(self.params['W2']) + self.params['b2']
         y_pred = np.argmax(scores, axis=1)
 
