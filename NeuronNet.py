@@ -79,8 +79,10 @@ class TwoLayerNet(object):
         # shape (N, C).                                                             #
         #############################################################################
         # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
-
-        pass
+        f1=X.dot(W1)+b1
+        f2=np.maximum(0,f1)
+        f3=f2.dot(W2)+b2
+        scores=f3
 
         # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
@@ -97,8 +99,16 @@ class TwoLayerNet(object):
         # classifier loss.                                                          #
         #############################################################################
         # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
-
-        pass
+        mat = np.zeros(scores.shape)
+        mat = scores.max(1).reshape(N,1)
+        scores -= mat
+        exp_scores = np.exp(scores)
+        correct_exp_scores = exp_scores[range(N),y]
+        data_loss = -np.log(correct_exp_scores/np.sum(exp_scores,axis=1))
+        data_loss = np.sum(data_loss)
+        data_loss /= N
+        reg_loss = 0.5 * reg * (np.sum(W1*W1) + np.sum(W2*W2))
+        loss = data_loss + reg_loss
 
         # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
