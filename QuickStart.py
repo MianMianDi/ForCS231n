@@ -60,11 +60,18 @@ from math import sqrt
 # imsave('cat_tinted.jpg',img_tinted)
 
 # x=np.array([[1,2,3],[4,5,6]])
+# b=[1,2,3]
 # y=np.array([1,2,3])
 # d=np.sum(np.abs(x-y),axis=1)
 # print(d)
 # min_index=np.argmin(d)
 # print(min_index)
+# mat=np.argmax(x,axis=1)
+# mat=x+b
+D=3
+H=2
+mat=np.linspace(-0.7, 0.3, num=D*H).reshape(D, H)
+print(mat)
 
 # x=np.array([[1,2,3],[4,5,6]])
 # print(np.array([1,0,1]))
@@ -99,3 +106,4 @@ from math import sqrt
 # print(X)
 # Y=np.ones((5,3))
 # print(Y-X)
+
