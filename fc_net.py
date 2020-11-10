@@ -44,7 +44,6 @@ class TwoLayerNet(object):
         self.params = {}
         self.reg = reg
 
-
         ############################################################################
         # TODO: Initialize the weights and biases of the two-layer net. Weights    #
         # should be initialized from a Gaussian centered at 0.0 with               #
@@ -55,6 +54,7 @@ class TwoLayerNet(object):
         # weights and biases using the keys 'W2' and 'b2'.                         #
         ############################################################################
         # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
+
         self.params['W1']=weight_scale*np.random.randn(input_dim,hidden_dim)
         self.params['b1']=np.zeros((1,hidden_dim))
         self.params['W2']=weight_scale*np.random.randn(hidden_dim,num_classes)
@@ -90,12 +90,14 @@ class TwoLayerNet(object):
         # class scores for X and storing them in the scores variable.              #
         ############################################################################
         # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
+
         N=X.shape[0]
         W1,b1=self.params['W1'],self.params['b1']
         W2,b2=self.params['W2'],self.params['b2']
         f_affine_relu,cache_relu=affine_relu_forward(X,W1,b1)
         f_affine,cache_affine=affine_forward(f_affine_relu,W2,b2)
         scores=f_affine
+
         # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
         ############################################################################
         #                             END OF YOUR CODE                             #
@@ -119,14 +121,14 @@ class TwoLayerNet(object):
         # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
         data_loss,dscores=softmax_loss(scores,y)
-        reg_loss=self.reg * np.sum(W1*W1)+self.reg * np.sum(W2*W2)
+        reg_loss=0.5* self.reg * np.sum(W1*W1)+0.5* self.reg * np.sum(W2*W2)
         loss=data_loss+reg_loss
 
         dh1,dW2,db2=affine_backward(dscores,cache_affine)
         dX,dW1,db1=affine_relu_backward(dh1,cache_relu)
 
-        dW2+=2* self.reg* W2
-        dW1+=2* self.reg* W1
+        dW2+= self.reg* W2
+        dW1+= self.reg* W1
         grads['W1']=dW1
         grads['W2']=dW2
         grads['b1']=db1
