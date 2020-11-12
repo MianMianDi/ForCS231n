@@ -276,10 +276,14 @@ class FullyConnectedNet(object):
         # layer, etc.                                                              #
         ############################################################################
         # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
-
+        out={}
+        out[0]=X
+        cache_hidden={}
         for i in range(self.num_layers-1):
             W,b=self.params['W'+str(i+1)],self.params['b'+str(i+1)]
-            out[i+1],cache[i]=affine_relu_forward(out[i],W,b)
+            out[i+1],cache_hidden[i]=affine_relu_forward(out[i],W,b)
+        W,b=self.params['W'+str(self.num_layers)],self.params['b'+str(self.num_layers)]
+        scores,cache=affine_forward(out[self.num_layers-1],W,b)
 
         # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
         ############################################################################
@@ -305,11 +309,20 @@ class FullyConnectedNet(object):
         # of 0.5 to simplify the expression for the gradient.                      #
         ############################################################################
         # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
+
         reg_loss=0.0
         data_loss,dscores=softmax_loss(scores,y)
         for i in range(self.num_layers):
             reg_loss+=0.5*self.reg*np.sum(self.params['W'+str(i+1)]*self.params['W'+str(i+1)])
         loss=data_loss+reg_loss
+
+        dout={} # note to use dict to initialize, not using list
+        num_hiddens=self.num_layers-1
+        dout[num_hiddens],grads['W'+str(self.num_layers)],grads['b'+str(self.num_layers)]=affine_backward(dscores,cache)
+        for i in range(num_hiddens):
+            dout[num_hiddens-1-i],grads['W'+str(num_hiddens-i)],grads['b'+str(num_hiddens-i)]=affine_relu_backward(dout[num_hiddens-i],cache_hidden[num_hiddens-1-i])
+        for i in range(self.num_layers):
+            grads['W'+str(i+1)]+=self.reg*self.params['W'+str(i+1)]
 
         # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
         ############################################################################
