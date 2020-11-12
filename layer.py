@@ -365,7 +365,12 @@ def layernorm_forward(x, gamma, beta, ln_param):
     ###########################################################################
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-    pass
+    x=x.T
+    sample_mean=np.mean(x,axis=0)
+    sample_var=np.mean((x-sample_mean)**2,axis=0)
+    x_normalized=(x-sample_mean)/np.sqrt(sample_var+eps)
+    out=gamma*x_normalized.T+beta
+    cache=(x,gamma,sample_mean,sample_var,eps,x_normalized)
 
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
     ###########################################################################
@@ -400,7 +405,15 @@ def layernorm_backward(dout, cache):
     ###########################################################################
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-    pass
+    x, gamma, mean, var, eps, x_normalized = cache
+    m = x.shape[0]
+    dx_normalized = (dout * gamma).T
+    dvar = np.sum(dx_normalized * (x - mean) * (-0.5) * np.power((var + eps), -1.5), axis=0)
+    dmean = np.sum(dx_normalized * (-1) / np.sqrt(var + eps), axis=0) + dvar * np.sum(-2 * (x - mean), axis=0) / m
+    dx = dx_normalized / np.sqrt(var + eps) + dvar * 2 * (x - mean) / m + dmean / m
+    dx = dx.T
+    dgamma = np.sum(dout * x_hat.T, axis=0)
+    dbeta = np.sum(dout, axis=0)
 
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
     ###########################################################################
