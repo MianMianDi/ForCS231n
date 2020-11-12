@@ -269,19 +269,14 @@ def batchnorm_backward(dout, cache):
     ###########################################################################
     # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-    x_normalized,gamma,beta,sample_mean,sample_var,x,eps=cache
-    N,D=x.shape
-    dx_normalized=dout*gamma
-    x_mu=x-sample_mean
-    sample_std_inv=1.0/np.sqrt(sample_var+eps)
-    dsample_var=-0.5*np.sum(dx_normalized*x_mu,axis=0,keepdims=True)
-    dsample_mean=-1.0*np.sum(dx_normalized*sample_std_inv,axis=0,keepdims=True)-\
-        2.0*dsample_var*np.mean(x_mu,axis=0,keepdims=True)
-    dx1=dx_normalized*sample_std_inv
-    dx2=2.0/N*dsample_var*x_mu
-    dx=dx1+dx2+1.0/N*dsample_mean
-    dgamma=np.sum(dout*x_normalized,axis=0,keepdims=True)
-    dbeta=np.sum(dout,axis=0,keepdims=True)
+    x_normalized, gamma, beta,mean, var, x,eps = cache
+    m = x.shape[0]
+    dx_normalized = dout * gamma
+    dvar = np.sum(dx_normalized * (x - mean) * (-0.5) * np.power((var + eps), -1.5), axis=0)
+    dmean = np.sum(dx_normalized * (-1) / np.sqrt(var + eps), axis=0) + dvar * np.sum(-2 * (x - mean), axis=0) / m
+    dx = dx_normalized / np.sqrt(var + eps) + dvar * 2 * (x - mean) / m + dmean / m
+    dgamma = np.sum(dout * x_normalized, axis=0)
+    dbeta = np.sum(dout, axis=0)
 
 
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
