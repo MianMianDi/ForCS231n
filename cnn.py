@@ -63,7 +63,14 @@ class ThreeLayerConvNet(object):
         ############################################################################
         # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-        pass
+        C,H,W=input_dim
+        H_conv_out,W_conv_out=H,W
+        self.params['W1']=weight_scale*np.random.randn(num_filters,C,filter_size,filter_size)
+        self.params['b1']=np.zeros((1,num_filters))
+        self.params['W2']=weight_scale*np.random.randn(num_filters*H_conv_out//2*W_conv_out//2,hidden_dim)
+        self.params['b2']=np.zeros((1,hidden_dim))
+        self.params['W3']=weight_scale*np.random.randn(hidden_dim,num_classes)
+        self.params['b3']=np.zeros((1,num_classes))
 
         # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
         ############################################################################
@@ -102,7 +109,10 @@ class ThreeLayerConvNet(object):
         ############################################################################
         # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-        pass
+        out1,cache1=conv_relu_pool_forward(X, W1, b1, conv_param, pool_param)
+        out2,cache2=affine_relu_forward(out1, W2, b2)
+        out3,cache3=affine_forward(out2,W3,b3)
+        scores=out3
 
         # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
         ############################################################################
@@ -125,7 +135,23 @@ class ThreeLayerConvNet(object):
         ############################################################################
         # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-        pass
+        data_loss,dscores=softmax_loss(scores,y)
+        reg_loss=0.5* self.reg * (np.sum(W1*W1)+np.sum(W2*W2)+np.sum(W3*W3))
+        loss=data_loss+reg_loss
+
+        dx3,dW3,db3=affine_backward(dscores, cache3)
+        dx2,dW2,db2=affine_relu_backward(dx3, cache2)
+        dX,dW1,db1=conv_relu_pool_backward(dx2, cache1)
+
+        dW3+= self.reg* W3
+        dW2+= self.reg* W2
+        dW1+= self.reg* W1
+        grads['W1']=dW1
+        grads['W2']=dW2
+        grads['W3']=dW3
+        grads['b1']=db1
+        grads['b2']=db2
+        grads['b3']=db3
 
         # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
         ############################################################################
