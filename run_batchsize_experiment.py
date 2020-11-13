@@ -47,3 +47,13 @@ def run_batchsize_experiments(normalization_mode):
 
 batch_sizes = [5,10,50]
 bn_solvers_bsize, solver_bsize, batch_sizes = run_batchsize_experiments('batchnorm')
+
+plt.subplot(2, 1, 1)
+plot_training_history('Training accuracy (Batch Normalization)','Epoch', solver_bsize, bn_solvers_bsize, \
+                      lambda x: x.train_acc_history, bl_marker='-^', bn_marker='-o', labels=batch_sizes)
+plt.subplot(2, 1, 2)
+plot_training_history('Validation accuracy (Batch Normalization)','Epoch', solver_bsize, bn_solvers_bsize, \
+                      lambda x: x.val_acc_history, bl_marker='-^', bn_marker='-o', labels=batch_sizes)
+
+plt.gcf().set_size_inches(15, 10)
+plt.show()

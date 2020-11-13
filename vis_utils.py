@@ -81,3 +81,43 @@ def show_net_weights(net):
     plt.imshow(visualize_grid(W1, padding=3).astype('uint8'))
     plt.gca().axis('off')
     plt.show()
+
+
+# Visualize the learned weights for each class.
+# Depending on your choice of learning rate and regularization strength, these may
+# or may not be nice to look at.
+
+w = best_svm.W[:-1,:] # strip out the bias
+w = w.reshape(32, 32, 3, 10)
+w_min, w_max = np.min(w), np.max(w)
+classes = ['plane', 'car', 'bird', 'cat', 'deer', 'dog', 'frog', 'horse', 'ship', 'truck']
+for i in range(10):
+    plt.subplot(2, 5, i + 1)
+      
+    # Rescale the weights to be between 0 and 255
+    wimg = 255.0 * (w[:, :, :, i].squeeze() - w_min) / (w_max - w_min)
+    plt.imshow(wimg.astype('uint8'))
+    plt.axis('off')
+    plt.title(classes[i])
+
+
+# utility function for plotting training history
+
+def plot_training_history(title, label, baseline, bn_solvers, plot_fn, bl_marker='.', bn_marker='.', labels=None):
+   
+    plt.title(title)
+    plt.xlabel(label)
+    bn_plots = [plot_fn(bn_solver) for bn_solver in bn_solvers]
+    bl_plot = plot_fn(baseline)
+    num_bn = len(bn_plots)
+    for i in range(num_bn):
+        label='with_norm'
+        if labels is not None:
+            label += str(labels[i])
+        plt.plot(bn_plots[i], bn_marker, label=label)
+    label='baseline'
+    if labels is not None:
+        label += str(labels[0])
+    plt.plot(bl_plot, bl_marker, label=label)
+    plt.legend(loc='lower center', ncol=num_bn+1) 
+

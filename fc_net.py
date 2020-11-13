@@ -219,6 +219,9 @@ class FullyConnectedNet(object):
             if self.normalization=="batchnorm" and i < len(hidden_dims):
                 self.params['gamma'+str(i+1)]=np.ones((1,layer_dims[i+1]))
                 self.params['beta'+str(i+1)]=np.zeros((1,layer_dims[i+1]))
+            elif self.normalization=="layernorm" and i<len(hidden_dims):
+                self.params['gamma'+str(i+1)]=np.ones((1,layer_dims[i+1]))
+                self.params['beta'+str(i+1)]=np.zeros((1,layer_dims[i+1]))
         # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
         ############################################################################
         #                             END OF YOUR CODE                             #
@@ -289,6 +292,11 @@ class FullyConnectedNet(object):
                 h[i],cache1[i]=affine_forward(out[i],W,b)
                 bn[i],cache2[i]=batchnorm_forward(h[i],gamma,beta,self.bn_params[i])
                 out[i+1],cache_hidden[i]=relu_forward(bn[i])
+            elif self.normalization == "layernorm":
+                gamma,beta=self.params['gamma'+str(i+1)],self.params['beta'+str(i+1)]
+                h[i],cache1[i]=affine_forward(out[i],W,b)
+                bn[i],cache2[i]=layernorm_forward(h[i],gamma,beta,self.bn_params[i])
+                out[i+1],cache_hidden[i]=relu_forward(bn[i])
             else:
                 out[i+1],cache_hidden[i]=affine_relu_forward(out[i],W,b)
 
@@ -334,6 +342,10 @@ class FullyConnectedNet(object):
             if self.normalization == "batchnorm":
                 dbn[num_hiddens-1-i]=relu_backward(dout[num_hiddens-i],cache_hidden[num_hiddens-1-i])
                 dh[num_hiddens-1-i],grads['gamma'+str(num_hiddens-i)],grads['beta'+str(num_hiddens-i)]=batchnorm_backward(dbn[num_hiddens-1-i],cache2[num_hiddens-1-i])
+                dout[num_hiddens-1-i],grads['W'+str(num_hiddens-i)],grads['b'+str(num_hiddens-i)]=affine_backward(dh[num_hiddens-1-i],cache1[num_hiddens-1-i])
+            else self.normalization == "layernorm":
+                dbn[num_hiddens-1-i]=relu_backward(dout[num_hiddens-i],cache_hidden[num_hiddens-1-i])
+                dh[num_hiddens-1-i],grads['gamma'+str(num_hiddens-i)],grads['beta'+str(num_hiddens-i)]=layernorm_backward(dbn[num_hiddens-1-i],cache2[num_hiddens-1-i])
                 dout[num_hiddens-1-i],grads['W'+str(num_hiddens-i)],grads['b'+str(num_hiddens-i)]=affine_backward(dh[num_hiddens-1-i],cache1[num_hiddens-1-i])
             else:
                 dout[num_hiddens-1-i],grads['W'+str(num_hiddens-i)],grads['b'+str(num_hiddens-i)]=affine_relu_backward(dout[num_hiddens-i],cache_hidden[num_hiddens-1-i])
