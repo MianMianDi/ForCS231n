@@ -282,7 +282,7 @@ class FullyConnectedNet(object):
         ############################################################################
         # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
         out={}
-        h,cache1,cache2,cache_hidden={},{},{},{}
+        h,cache1,cache2,cache_hidden,cache4={},{},{},{},{}
         bn={}
         out[0]=X
         for i in range(self.num_layers-1):
@@ -292,13 +292,19 @@ class FullyConnectedNet(object):
                 h[i],cache1[i]=affine_forward(out[i],W,b)
                 bn[i],cache2[i]=batchnorm_forward(h[i],gamma,beta,self.bn_params[i])
                 out[i+1],cache_hidden[i]=relu_forward(bn[i])
+                if self.use_dropout:
+                    out[i+1],cache4[i]=dropout_forward(out[i+1],self.dropout_param)
             elif self.normalization == "layernorm":
                 gamma,beta=self.params['gamma'+str(i+1)],self.params['beta'+str(i+1)]
                 h[i],cache1[i]=affine_forward(out[i],W,b)
                 bn[i],cache2[i]=layernorm_forward(h[i],gamma,beta,self.bn_params[i])
                 out[i+1],cache_hidden[i]=relu_forward(bn[i])
+                if self.use_dropout:
+                    out[i+1],cache4[i]=dropout_forward(out[i+1],self.dropout_param)
             else:
                 out[i+1],cache_hidden[i]=affine_relu_forward(out[i],W,b)
+                if self.use_dropout:
+                    out[i+1],cache4[i]=dropout_forward(out[i+1],self.dropout_param)
 
         W,b=self.params['W'+str(self.num_layers)],self.params['b'+str(self.num_layers)]
         scores,cache=affine_forward(out[self.num_layers-1],W,b)
@@ -334,20 +340,30 @@ class FullyConnectedNet(object):
             reg_loss+=0.5*self.reg*np.sum(self.params['W'+str(i+1)]*self.params['W'+str(i+1)])
         loss=data_loss+reg_loss
 
-        dout={} # note to use dict to initialize, not using list
+        dout,ddrop={},{} # note to use dict to initialize, not using list
         dbn,dh={},{}
         num_hiddens=self.num_layers-1
         dout[num_hiddens],grads['W'+str(self.num_layers)],grads['b'+str(self.num_layers)]=affine_backward(dscores,cache)
         for i in range(num_hiddens):
             if self.normalization == "batchnorm":
+                if self.use_dropout:
+                    ddrop[num_hiddens-1-i]=dropout_backward(dout[num_hiddens-i],cache4[num_hiddens-1-i])
+                    dout[num_hiddens-i]=ddrop[num_hiddens-1-i]
                 dbn[num_hiddens-1-i]=relu_backward(dout[num_hiddens-i],cache_hidden[num_hiddens-1-i])
                 dh[num_hiddens-1-i],grads['gamma'+str(num_hiddens-i)],grads['beta'+str(num_hiddens-i)]=batchnorm_backward(dbn[num_hiddens-1-i],cache2[num_hiddens-1-i])
                 dout[num_hiddens-1-i],grads['W'+str(num_hiddens-i)],grads['b'+str(num_hiddens-i)]=affine_backward(dh[num_hiddens-1-i],cache1[num_hiddens-1-i])
-            else self.normalization == "layernorm":
+                
+            elif self.normalization == "layernorm":
+                if self.use_dropout:
+                    ddrop[num_hiddens-1-i]=dropout_backward(dout[num_hiddens-i],cache4[num_hiddens-1-i])
+                    dout[num_hiddens-i]=ddrop[num_hiddens-1-i]
                 dbn[num_hiddens-1-i]=relu_backward(dout[num_hiddens-i],cache_hidden[num_hiddens-1-i])
                 dh[num_hiddens-1-i],grads['gamma'+str(num_hiddens-i)],grads['beta'+str(num_hiddens-i)]=layernorm_backward(dbn[num_hiddens-1-i],cache2[num_hiddens-1-i])
                 dout[num_hiddens-1-i],grads['W'+str(num_hiddens-i)],grads['b'+str(num_hiddens-i)]=affine_backward(dh[num_hiddens-1-i],cache1[num_hiddens-1-i])
             else:
+                if self.use_dropout:
+                    ddrop[num_hiddens-1-i]=dropout_backward(dout[num_hiddens-i],cache4[num_hiddens-1-i])
+                    dout[num_hiddens-i]=ddrop[num_hiddens-1-i]
                 dout[num_hiddens-1-i],grads['W'+str(num_hiddens-i)],grads['b'+str(num_hiddens-i)]=affine_relu_backward(dout[num_hiddens-i],cache_hidden[num_hiddens-1-i])
 
         for i in range(self.num_layers):

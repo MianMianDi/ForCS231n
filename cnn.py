@@ -1,162 +1,135 @@
-from __future__ import print_function
-import torch
-import torch.nn as nn
-import torch.nn.functional as F
-import random
+from builtins import object
+import numpy as np
 
-class MyReLU(torch.autograd.Function):
+from ..layers import *
+from ..fast_layers import *
+from ..layer_utils import *
+
+
+class ThreeLayerConvNet(object):
     """
-    我们可以通过建立torch.autograd的子类来实现我们自定义的autograd函数，并完成张量的正向和反向传播。
+    A three-layer convolutional network with the following architecture:
+
+    conv - relu - 2x2 max pool - affine - relu - affine - softmax
+
+    The network operates on minibatches of data that have shape (N, C, H, W)
+    consisting of N images, each with height H and width W and with C input
+    channels.
     """
 
-    @staticmethod
-    def forward(ctx, input):
+    def __init__(
+        self,
+        input_dim=(3, 32, 32),
+        num_filters=32,
+        filter_size=7,
+        hidden_dim=100,
+        num_classes=10,
+        weight_scale=1e-3,
+        reg=0.0,
+        dtype=np.float32,
+    ):
         """
-        在前向传播中，我们收到包含输入和返回的张量包含输出的张量。 
-        ctx是可以使用的上下文对象存储信息以进行向后计算。 
-        您可以使用ctx.save_for_backward方法缓存任意对象，以便反向传播使用。
+        Initialize a new network.
+
+        Inputs:
+        - input_dim: Tuple (C, H, W) giving size of input data
+        - num_filters: Number of filters to use in the convolutional layer
+        - filter_size: Width/height of filters to use in the convolutional layer
+        - hidden_dim: Number of units to use in the fully-connected hidden layer
+        - num_classes: Number of scores to produce from the final affine layer.
+        - weight_scale: Scalar giving standard deviation for random initialization
+          of weights.
+        - reg: Scalar giving L2 regularization strength
+        - dtype: numpy datatype to use for computation.
         """
-        ctx.save_for_backward(input)
-        return input.clamp(min=0)
+        self.params = {}
+        self.reg = reg
+        self.dtype = dtype
 
-    @staticmethod
-    def backward(ctx, grad_output):
+        ############################################################################
+        # TODO: Initialize weights and biases for the three-layer convolutional    #
+        # network. Weights should be initialized from a Gaussian centered at 0.0   #
+        # with standard deviation equal to weight_scale; biases should be          #
+        # initialized to zero. All weights and biases should be stored in the      #
+        #  dictionary self.params. Store weights and biases for the convolutional  #
+        # layer using the keys 'W1' and 'b1'; use keys 'W2' and 'b2' for the       #
+        # weights and biases of the hidden affine layer, and keys 'W3' and 'b3'    #
+        # for the weights and biases of the output affine layer.                   #
+        #                                                                          #
+        # IMPORTANT: For this assignment, you can assume that the padding          #
+        # and stride of the first convolutional layer are chosen so that           #
+        # **the width and height of the input are preserved**. Take a look at      #
+        # the start of the loss() function to see how that happens.                #
+        ############################################################################
+        # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
+
+        pass
+
+        # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
+        ############################################################################
+        #                             END OF YOUR CODE                             #
+        ############################################################################
+
+        for k, v in self.params.items():
+            self.params[k] = v.astype(dtype)
+
+    def loss(self, X, y=None):
         """
-        在反向传播中，我们接收到上下文对象和一个张量，其包含了相对于正向传播过程中产生的输出的损失的梯度。
-        我们可以从上下文对象中检索缓存的数据，并且必须计算并返回与正向传播的输入相关的损失的梯度。
+        Evaluate loss and gradient for the three-layer convolutional network.
+
+        Input / output: Same API as TwoLayerNet in fc_net.py.
         """
-        input, = ctx.saved_tensors
-        grad_input = grad_output.clone()
-        grad_input[input < 0] = 0
-        return grad_input
+        W1, b1 = self.params["W1"], self.params["b1"]
+        W2, b2 = self.params["W2"], self.params["b2"]
+        W3, b3 = self.params["W3"], self.params["b3"]
 
-# 自定义model
-class TwoLayerNet(torch.nn.Module):
-    def __init__(self, D_in, H, D_out):
-        """
-        在构造函数中，我们实例化了两个nn.Linear模块，并将它们作为成员变量。
-        """
-        super(TwoLayerNet, self).__init__()
-        self.linear1 = torch.nn.Linear(D_in, H)
-        self.linear2 = torch.nn.Linear(H, D_out)
+        # pass conv_param to the forward pass for the convolutional layer
+        # Padding and stride chosen to preserve the input spatial size
+        filter_size = W1.shape[2]
+        conv_param = {"stride": 1, "pad": (filter_size - 1) // 2}
 
-    def forward(self, x):
-        """
-        在前向传播的函数中，我们接收一个输入的张量，也必须返回一个输出张量。
-        我们可以使用构造函数中定义的模块以及张量上的任意的(可微分的）操作。
-        """
-        h_relu = self.linear1(x).clamp(min=0)
-        y_pred = self.linear2(h_relu)
-        return y_pred
+        # pass pool_param to the forward pass for the max-pooling layer
+        pool_param = {"pool_height": 2, "pool_width": 2, "stride": 2}
 
-# 动态图和权重共享版本
-# 一个完全连接的ReLU网络，该网络在每个前向传递中选择1到4之间的随机数作为隐藏层的层数，多次重复使用相同的权重计算最里面的隐藏层。
-class DynamicNet(torch.nn.Module):
-    def __init__(self, D_in, H, D_out):
-        """
-        在构造函数中，我们构造了三个nn.Linear实例，它们将在前向传播时被使用。
-        """
-        super(DynamicNet, self).__init__()
-        self.input_linear = torch.nn.Linear(D_in, H)
-        self.middle_linear = torch.nn.Linear(H, H)
-        self.output_linear = torch.nn.Linear(H, D_out)
+        scores = None
+        ############################################################################
+        # TODO: Implement the forward pass for the three-layer convolutional net,  #
+        # computing the class scores for X and storing them in the scores          #
+        # variable.                                                                #
+        #                                                                          #
+        # Remember you can use the functions defined in cs231n/fast_layers.py and  #
+        # cs231n/layer_utils.py in your implementation (already imported).         #
+        ############################################################################
+        # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-    def forward(self, x):
-        """
-        对于模型的前向传播，我们随机选择0、1、2、3，并重用了多次计算隐藏层的middle_linear模块。
-        由于每个前向传播构建一个动态计算图，
-        我们可以在定义模型的前向传播时使用常规Python控制流运算符，如循环或条件语句。
-        在这里，我们还看到，在定义计算图形时多次重用同一个模块是完全安全的。
-        这是Lua Torch的一大改进，因为Lua Torch中每个模块只能使用一次。
-        """
-        h_relu = self.input_linear(x).clamp(min=0)
-        for _ in range(random.randint(0, 3)):
-            h_relu = self.middle_linear(h_relu).clamp(min=0)
-        y_pred = self.output_linear(h_relu)
-        return y_pred
+        pass
 
+        # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
+        ############################################################################
+        #                             END OF YOUR CODE                             #
+        ############################################################################
 
-dtype=torch.float
-device=torch.device("cpu")
+        if y is None:
+            return scores
 
-N,D_in,H,D_out=64,1000,100,10
+        loss, grads = 0, {}
+        ############################################################################
+        # TODO: Implement the backward pass for the three-layer convolutional net, #
+        # storing the loss and gradients in the loss and grads variables. Compute  #
+        # data loss using softmax, and make sure that grads[k] holds the gradients #
+        # for self.params[k]. Don't forget to add L2 regularization!               #
+        #                                                                          #
+        # NOTE: To ensure that your implementation matches ours and you pass the   #
+        # automated tests, make sure that your L2 regularization includes a factor #
+        # of 0.5 to simplify the expression for the gradient.                      #
+        ############################################################################
+        # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-x=torch.randn(N,D_in,device=device,dtype=dtype)
-y=torch.randn(N,D_out,device=device,dtype=dtype)
+        pass
 
-# # 使用nn包定义模型和损失函数
-# model=torch.nn.Sequential(
-#     torch.nn.Linear(D_in,H),
-#     torch.nn.ReLU(),
-#     torch.nn.Linear(H,D_out)
-# )
-# loss_fn=torch.nn.MSEloss(reduction='sum')
+        # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
+        ############################################################################
+        #                             END OF YOUR CODE                             #
+        ############################################################################
 
-# 通过实例化上面定义的类来构建我们的模型
-# model = TwoLayerNet(D_in, H, D_out)
-model = DynamicNet(D_in, H, D_out)
-
-# 将requires_grad设置为True，意味着我们希望在反向传播时候计算这些值的梯度
-w1=torch.randn(D_in,H,device=device,dtype=dtype,requires_grad=True)
-w2=torch.randn(H,D_out,device=device,dtype=dtype,requires_grad=True)
-
-learning_rate=1e-6
-# # 使用optim包定义优化器(Optimizer）。Optimizer将会为我们更新模型的权重
-# # 这里我们使用Adam优化方法；optim包还包含了许多别的优化算法
-# # Adam构造函数的第一个参数告诉优化器应该更新哪些张量
-# optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
-
-# 构造损失函数和优化器
-# SGD构造函数中对model.parameters()的调用
-# 将包含模型的一部分，即两个nn.Linear模块的可学习参数
-criterion = torch.nn.MSELoss(reduction='sum')
-optimizer = torch.optim.SGD(model.parameters(), lr=1e-4)
-
-for t in range(500):
-    # 前向传播：计算预测值y
-    # y_pred=x.mm(w1).clamp(min=0).mm(w2)
-    # 我们也使用自定义的自动求导操作来计算 RELU.
-    # relu=MyReLU.apply
-    # y_pred = relu(x.mm(w1)).mm(w2)
-    
-    # 模块对象重载了__call__运算符，所以可以像函数那样调用它们
-    # 这么做相当于向模块传入了一个张量，然后它返回了一个输出张量
-    y_pred = model(x)
-    
-    # 计算并输出loss
-    # loss是一个形状为(1,)的张量
-    # loss.item()是这个张量对应的python数值
-    # loss=(y_pred-y).pow(2).sum().item()
-    # loss=loss_fn(y_pred,y)
-    loss=criterion(y_pred,y)
-    
-    if t%100==99:
-        print(t,loss.item())
-    # # 反向传播之前清零梯度
-    # model.zero_grad()
-
-    # 在反向传播之前，使用optimizer将它要更新的所有张量的梯度清零(这些张量是模型可学习的权重)。
-    # 这是因为默认情况下，每当调用.backward(）时，渐变都会累积在缓冲区中(即不会被覆盖）
-    optimizer.zero_grad()
-
-    # 这个调用将计算loss对所有requires_grad=True的tensor的梯度
-    # ,即对所有可学习参数的梯度。
-    # 这次调用后，w1.grad和w2.grad将分别是loss对w1和w2的梯度张量。
-    loss.backward()
-
-    # 调用Optimizer的step函数使它所有参数更新
-    optimizer.step()
-
-    # 使用梯度下降更新权重。对于这一步，我们只想对w1和w2的值进行原地改变；不想为更新阶段构建计算图，
-    # 所以我们使用torch.no_grad()上下文管理器防止PyTorch为更新构建计算图
-    # with torch.no_grad():
-    #     w1 -= learning_rate * w1.grad
-    #     w2 -= learning_rate * w2.grad
-
-    #     # 反向传播之后手动将梯度置零
-    #     w1.grad.zero_()
-    #     w2.grad.zero_()
-
-    # with torch.no_grad():
-    #     for param in model.parameters():
-    #         param-=learning_rate*param.grad
+        return loss, grads
