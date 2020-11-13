@@ -412,7 +412,7 @@ def layernorm_backward(dout, cache):
     dmean = np.sum(dx_normalized * (-1) / np.sqrt(var + eps), axis=0) + dvar * np.sum(-2 * (x - mean), axis=0) / m
     dx = dx_normalized / np.sqrt(var + eps) + dvar * 2 * (x - mean) / m + dmean / m
     dx = dx.T
-    dgamma = np.sum(dout * x_hat.T, axis=0)
+    dgamma = np.sum(dout * x_normalized.T, axis=0)
     dbeta = np.sum(dout, axis=0)
 
     # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
